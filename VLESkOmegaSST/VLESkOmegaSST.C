@@ -403,7 +403,7 @@ bool VLESkOmegaSST::read()
 
 void VLESkOmegaSST::correct()
 {
-    VLESModel::correct();
+    RASModel::correct();
 
     if (!turbulence_)
     {

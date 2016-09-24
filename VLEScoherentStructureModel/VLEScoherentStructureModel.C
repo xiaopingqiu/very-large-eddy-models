@@ -46,47 +46,23 @@ addToRunTimeSelectionTable(RASModel, VLEScoherentStructureModel, dictionary);
 
 tmp<volScalarField> VLEScoherentStructureModel::F1(const volScalarField& CDkOmega) const
 {
-    if (!delayed_)
-    {
-        return tmp<volScalarField>
-        (
-            new volScalarField   
-            (
-                IOobject
-                (
-                    "zero",
-                    mesh_.time().timeName(),
-                    mesh_,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh_,
-                dimensionedScalar("zero", dimless, 0),
-                calculatedFvPatchScalarField::typeName
-            )
-        );
-    }    
-
-    else
-    {
-	tmp<volScalarField> CDkOmegaPlus = max
-	(
-	    CDkOmega,
-	    dimensionedScalar("1.0e-10", dimless/sqr(dimTime), 1.0e-10)
-	);
-
-	tmp<volScalarField> arg1 = min
-	(
-	    max
-	    (
-	        (scalar(1)/betaStar_)*sqrt(k_)/(omega_*y_),
-	        scalar(500)*nu()/(sqr(y_)*omega_)
-	    ),
-	    (4*alphaOmega2_)*k_/(CDkOmegaPlus*sqr(y_))
-	);
-
-	return tanh(pow4(arg1));
-    }
+   tmp<volScalarField> CDkOmegaPlus = max
+   (
+       CDkOmega,
+       dimensionedScalar("1.0e-10", dimless/sqr(dimTime), 1.0e-10)
+   );
+   
+   tmp<volScalarField> arg1 = min
+   (
+       max
+       (
+           (scalar(1)/betaStar_)*sqrt(k_)/(omega_*y_),
+           scalar(500)*nu()/(sqr(y_)*omega_)
+       ),
+       (4*alphaOmega2_)*k_/(CDkOmegaPlus*sqr(y_))
+   );
+   
+   return tanh(pow4(arg1));
 }
 
 
@@ -221,15 +197,6 @@ VLEScoherentStructureModel::VLEScoherentStructureModel
             "c1",
             coeffDict_,
             10.0
-        )
-    ),
-    Cx_
-    (
-        dimensioned<scalar>::lookupOrAddToDict
-        (
-            "Cx",
-            coeffDict_,
-            0.61
         )
     ),
 
@@ -390,7 +357,6 @@ bool VLEScoherentStructureModel::read()
         betaStar_.readIfPresent(coeffDict());
         a1_.readIfPresent(coeffDict());
         c1_.readIfPresent(coeffDict());
-        Cx_.readIfPresent(coeffDict());
 
         return true;
     }
@@ -432,9 +398,41 @@ void VLEScoherentStructureModel::correct()
 
     label nD = mesh_.nGeometricD();
 
+    tmp<volTensorField> gradU = fvc::grad(U_);
+
+    tmp<volScalarField> const Q = 0.5*
+    (
+        (skew(gradU())&&skew(gradU())) 
+        - 
+        (symm(gradU())&&symm(gradU()))
+    );
+
+    tmp<volScalarField> const E = 0.5*
+    (
+        (skew(gradU())&&skew(gradU())) 
+        + 
+        (symm(gradU())&&symm(gradU()))
+    );
+
+
+    volScalarField Fcs = 
+        (Q/(E+dimensionedScalar("smallE",E->dimensions(),VSMALL)))();
+
+    dimensionedScalar FcsNegOne("FcsNegOne",Fcs.dimensions(),scalar(-1));
+    dimensionedScalar FcsPosOne("FcsPosOne",Fcs.dimensions(),scalar( 1));
+    dimensionedScalar FcsPosTwo("FcsPosTwo",Fcs.dimensions(),scalar( 2));
+    dimensionedScalar FcsZero("FcsZero",Fcs.dimensions(),scalar(0));
+
+    Fcs = min(max(Fcs,FcsNegOne),FcsPosOne);
+
+    tmp<volScalarField> const FOmega = min(max(1 - Fcs,FcsZero),FcsPosTwo);
+
+    tmp<volScalarField> const Cx = 
+        0.27663*pow(min(mag(Fcs),FcsPosOne),1.5)*FOmega;
+
     if (nD == 3)
     {
-        Lc.internalField() = Cx_*pow(mesh_.V(), 1.0/3.0);
+        Lc.internalField() = Cx().internalField()*pow(mesh_.V(), 1.0/3.0);
     }
     else if (nD == 2)
     {
@@ -450,18 +448,17 @@ void VLEScoherentStructureModel::correct()
             }
         }
 
-        Lc.internalField() = Cx_*sqrt(mesh_.V()/thickness);
+        Lc.internalField() = Cx().internalField()*sqrt(mesh_.V()/thickness);
     }
     else
     {
-        FatalErrorIn("VLESKOmegaSST.cpp")
+        FatalErrorIn("CoherentStructureModelVLES.cpp")
             << "Case is not 3D or 2D, VLES is not applicable"
             << exit(FatalError);
     }  
 
-    tmp<volScalarField> const Li = pow(k_,3.0/2.0)/(betaStar_*k_*omega_);
-    tmp<volScalarField> const Lk = 
-        pow(nu(),3.0/4.0)/pow(betaStar_*k_*omega_,1.0/4.0);
+    tmp<volScalarField> Li = pow(k_,3.0/2.0)/(betaStar_*k_*omega_);
+    tmp<volScalarField> Lk = pow(nu(),3.0/4.0)/pow(betaStar_*k_*omega_,1.0/4.0);
 
     volScalarField const S2(2*magSqr(symm(fvc::grad(U_))));
     volScalarField const Omega(2*magSqr(skew(fvc::grad(U_))));
@@ -493,13 +490,13 @@ void VLEScoherentStructureModel::correct()
      ==
         gamma(F1)* min(G, c1_*betaStar_*k_*omega_)/(nut_ + nutMin)
       - fvm::Sp(beta(F1)*omega_, omega_)
-      + 2.0*(1.0-F1)*alphaOmega2_*(fvc::grad(k_)&fvc::grad(omega_))/omega_
+      + 2*(1-F1)*alphaOmega2_*(fvc::grad(k_)&fvc::grad(omega_))/omega_
     );
 
     omegaEqn().relax();
 
     omegaEqn().boundaryManipulate(omega_.boundaryField());
-    
+
     //mesh_.updateFvMatrix(omegaEqn());
     solve(omegaEqn);
     bound(omega_, omegaMin_);
@@ -519,6 +516,7 @@ void VLEScoherentStructureModel::correct()
     //mesh_.updateFvMatrix(kEqn());
     solve(kEqn);
     bound(k_, kMin_);
+
 
     // Re-calculate viscosity
 
@@ -562,6 +560,7 @@ void VLEScoherentStructureModel::correct()
     Fr_.correctBoundaryConditions();
 
     nut_ = Fr_*a1_*k_/max(a1_*omega_, F2()*sqrt(S2));
+
     nut_.correctBoundaryConditions();
 
 }

@@ -112,9 +112,6 @@ protected:
 
     dimensionedScalar a1_;
     dimensionedScalar c1_;
-    dimensionedScalar Cx_;
-
-    Switch F3_;
 
 
     //- Wall distance field
@@ -283,4 +280,3 @@ public:
 #endif
 
 // ************************************************************************* //
-VLEScoherentStructureModel

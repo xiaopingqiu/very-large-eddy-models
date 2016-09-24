@@ -1,3 +1,0 @@
-VLESkOmegaSST/VLESkOmegaSST.C
-
-LIB = $(FOAM_USER_LIBBIN)/libincompressibleVLESModels

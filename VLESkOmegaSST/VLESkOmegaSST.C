@@ -46,69 +46,61 @@ addToRunTimeSelectionTable(RASModel, VLESkOmegaSST, dictionary);
 
 tmp<volScalarField> VLESkOmegaSST::F1(const volScalarField& CDkOmega) const
 {
-    tmp<volScalarField> CDkOmegaPlus = max
-    (
-        CDkOmega,
-        dimensionedScalar("1.0e-10", dimless/sqr(dimTime), 1.0e-10)
-    );
-
-    tmp<volScalarField> arg1 = min
-    (
-        min
+    if (!delayed_)
+    {
+        return tmp<volScalarField>
         (
-            max
+            new volScalarField   
             (
-                (scalar(1)/betaStar_)*sqrt(k_)/(omega_*y_),
-                scalar(500)*nu()/(sqr(y_)*omega_)
-            ),
-            (4*alphaOmega2_)*k_/(CDkOmegaPlus*sqr(y_))
-        ),
-        scalar(10)
-    );
+                IOobject
+                (
+                    "zero",
+                    mesh_.time().timeName(),
+                    mesh_,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh_,
+                dimensionedScalar("zero", dimless, 0),
+                calculatedFvPatchScalarField::typeName
+            )
+        );
+    }    
 
-    return tanh(pow4(arg1));
+    else
+    {
+	tmp<volScalarField> CDkOmegaPlus = max
+	(
+	    CDkOmega,
+	    dimensionedScalar("1.0e-10", dimless/sqr(dimTime), 1.0e-10)
+	);
+
+	tmp<volScalarField> arg1 = min
+	(
+	    max
+	    (
+	        (scalar(1)/betaStar_)*sqrt(k_)/(omega_*y_),
+	        scalar(500)*nu()/(sqr(y_)*omega_)
+	    ),
+	    (4*alphaOmega2_)*k_/(CDkOmegaPlus*sqr(y_))
+	);
+
+	return tanh(pow4(arg1));
+    }
 }
 
 
 tmp<volScalarField> VLESkOmegaSST::F2() const
 {
-    tmp<volScalarField> arg2 = min
+    tmp<volScalarField> arg2 = max
     (
-        max
-        (
-            (scalar(2)/betaStar_)*sqrt(k_)/(omega_*y_),
-            scalar(500)*nu()/(sqr(y_)*omega_)
-        ),
-        scalar(100)
+        (scalar(2)/betaStar_)*sqrt(k_)/(omega_*y_),
+        scalar(500)*nu()/(sqr(y_)*omega_)
     );
 
     return tanh(sqr(arg2));
 }
 
-
-tmp<volScalarField> VLESkOmegaSST::F3() const
-{
-    tmp<volScalarField> arg3 = min
-    (
-        150*nu()/(omega_*sqr(y_)),
-        scalar(10)
-    );
-
-    return 1 - tanh(pow4(arg3));
-}
-
-
-tmp<volScalarField> VLESkOmegaSST::F23() const
-{
-    tmp<volScalarField> f23(F2());
-
-    if (F3_)
-    {
-        f23() *= F3();
-    }
-
-    return f23;
-}
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -124,6 +116,14 @@ VLESkOmegaSST::VLESkOmegaSST
 :
     RASModel(modelName, U, phi, transport, turbulenceModelName),
 
+    delayed_
+    (
+        coeffDict_.lookupOrDefault<Switch>
+        (
+            "delayed", 
+            true
+        )
+    ),
     alphaK1_
     (
         dimensioned<scalar>::lookupOrAddToDict
@@ -166,7 +166,7 @@ VLESkOmegaSST::VLESkOmegaSST
         (
             "gamma1",
             coeffDict_,
-            5.0/9.0
+            0.5555
         )
     ),
     gamma2_
@@ -214,15 +214,6 @@ VLESkOmegaSST::VLESkOmegaSST
             0.31
         )
     ),
-    b1_
-    (
-        dimensioned<scalar>::lookupOrAddToDict
-        (
-            "b1",
-            coeffDict_,
-            1.0
-        )
-    ),
     c1_
     (
         dimensioned<scalar>::lookupOrAddToDict
@@ -232,13 +223,13 @@ VLESkOmegaSST::VLESkOmegaSST
             10.0
         )
     ),
-    F3_
+    Cx_
     (
-        Switch::lookupOrAddToDict
+        dimensioned<scalar>::lookupOrAddToDict
         (
-            "F3",
+            "Cx",
             coeffDict_,
-            false
+            0.61
         )
     ),
 
@@ -251,10 +242,10 @@ VLESkOmegaSST::VLESkOmegaSST
             "k",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        autoCreateK("k", mesh_)
+        mesh_
     ),
     omega_
     (
@@ -263,10 +254,10 @@ VLESkOmegaSST::VLESkOmegaSST
             "omega",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        autoCreateOmega("omega", mesh_)
+        mesh_
     ),
     nut_
     (
@@ -275,10 +266,24 @@ VLESkOmegaSST::VLESkOmegaSST
             "nut",
             runTime_.timeName(),
             mesh_,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh_
+    ),
+    Fr_
+    (
+        IOobject
+        (
+            "Fr",
+            runTime_.timeName(),
+            mesh_,
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
-        autoCreateNut("nut", mesh_)
+        mesh_,
+        dimensionedScalar("fr", dimless, 1),
+        calculatedFvPatchScalarField::typeName
     )
 {
     bound(k_, kMin_);
@@ -290,9 +295,10 @@ VLESkOmegaSST::VLESkOmegaSST
       / max
         (
             a1_*omega_,
-            b1_*F23()*sqrt(2.0)*mag(symm(fvc::grad(U_)))
+            F2()*sqrt(2.0)*mag(symm(fvc::grad(U_)))
         )
     );
+    
     nut_.correctBoundaryConditions();
 
     printCoeffs();
@@ -372,6 +378,7 @@ bool VLESkOmegaSST::read()
 {
     if (RASModel::read())
     {
+        delayed_.readIfPresent("delayed", coeffDict());
         alphaK1_.readIfPresent(coeffDict());
         alphaK2_.readIfPresent(coeffDict());
         alphaOmega1_.readIfPresent(coeffDict());
@@ -382,9 +389,8 @@ bool VLESkOmegaSST::read()
         beta2_.readIfPresent(coeffDict());
         betaStar_.readIfPresent(coeffDict());
         a1_.readIfPresent(coeffDict());
-        b1_.readIfPresent(coeffDict());
         c1_.readIfPresent(coeffDict());
-        F3_.readIfPresent("F3", coeffDict());
+        Cx_.readIfPresent(coeffDict());
 
         return true;
     }
@@ -397,7 +403,7 @@ bool VLESkOmegaSST::read()
 
 void VLESkOmegaSST::correct()
 {
-    RASModel::correct();
+    VLESModel::correct();
 
     if (!turbulence_)
     {
@@ -409,18 +415,74 @@ void VLESkOmegaSST::correct()
         y_.correct();
     }
 
-    const volScalarField S2(2*magSqr(symm(fvc::grad(U_))));
+    volScalarField Lc
+    (
+        IOobject
+        (
+            "Lc",
+            mesh_.time().timeName(),
+            mesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh_,
+        dimensionedScalar("Lc", dimLength, SMALL),
+        calculatedFvPatchScalarField::typeName
+    );
+
+    label nD = mesh_.nGeometricD();
+
+    if (nD == 3)
+    {
+        Lc.internalField() = Cx_*pow(mesh_.V(), 1.0/3.0);
+    }
+    else if (nD == 2)
+    {
+        Vector<label> const& directions = mesh_.geometricD();
+
+        scalar thickness = 0.0;
+        for (direction dir=0; dir<directions.nComponents; dir++)
+        {
+            if (directions[dir] == -1)
+            {
+                thickness = mesh_.bounds().span()[dir];
+                break;
+            }
+        }
+
+        Lc.internalField() = Cx_*sqrt(mesh_.V()/thickness);
+    }
+    else
+    {
+        FatalErrorIn("VLESKOmegaSST.cpp")
+            << "Case is not 3D or 2D, VLES is not applicable"
+            << exit(FatalError);
+    }  
+
+    tmp<volScalarField> const Li = pow(k_,3.0/2.0)/(betaStar_*k_*omega_);
+    tmp<volScalarField> const Lk = 
+        pow(nu(),3.0/4.0)/pow(betaStar_*k_*omega_,1.0/4.0);
+
+    volScalarField const S2(2*magSqr(symm(fvc::grad(U_))));
+    volScalarField const Omega(2*magSqr(skew(fvc::grad(U_))));
     volScalarField G(GName(), nut_*S2);
 
     // Update omega and G at the wall
     omega_.boundaryField().updateCoeffs();
 
-    const volScalarField CDkOmega
+    volScalarField const CDkOmega
     (
         (2*alphaOmega2_)*(fvc::grad(k_) & fvc::grad(omega_))/omega_
     );
 
-    const volScalarField F1(this->F1(CDkOmega));
+    volScalarField const F1(this->F1(CDkOmega));
+
+    dimensionedScalar nutMin
+    (
+        "nutMin", 
+        kMin_.dimensions()/omegaMin_.dimensions(), 
+        SMALL
+     );
 
     // Turbulent frequency equation
     tmp<fvScalarMatrix> omegaEqn
@@ -429,20 +491,16 @@ void VLESkOmegaSST::correct()
       + fvm::div(phi_, omega_)
       - fvm::laplacian(DomegaEff(F1), omega_)
      ==
-        gamma(F1)
-       *min(S2, (c1_/a1_)*betaStar_*omega_*max(a1_*omega_, b1_*F23()*sqrt(S2)))
+        gamma(F1)* min(G, c1_*betaStar_*k_*omega_)/(nut_ + nutMin)
       - fvm::Sp(beta(F1)*omega_, omega_)
-      - fvm::SuSp
-        (
-            (F1 - scalar(1))*CDkOmega/omega_,
-            omega_
-        )
+      + 2.0*(1.0-F1)*alphaOmega2_*(fvc::grad(k_)&fvc::grad(omega_))/omega_
     );
 
     omegaEqn().relax();
 
     omegaEqn().boundaryManipulate(omega_.boundaryField());
-
+    
+    //mesh_.updateFvMatrix(omegaEqn());
     solve(omegaEqn);
     bound(omega_, omegaMin_);
 
@@ -458,13 +516,54 @@ void VLESkOmegaSST::correct()
     );
 
     kEqn().relax();
+    //mesh_.updateFvMatrix(kEqn());
     solve(kEqn);
     bound(k_, kMin_);
 
-
     // Re-calculate viscosity
-    nut_ = a1_*k_/max(a1_*omega_, b1_*F23()*sqrt(S2));
+
+    if (delayed_)
+    {
+        Fr_ = max
+        (
+            min
+            (
+                scalar(1.0),
+                pow
+                (
+                    (scalar(1.0)-(1-F1)*exp(-0.002*Lc/Lk()))
+                    /
+                    (scalar(1.0)-(1-F1)*exp(-0.002*Li()/Lk())),
+                    2.0
+                )
+            ),
+            scalar(0.0)
+        );
+    }
+    else
+    {
+        Fr_ = max
+        (
+            min
+            (
+                scalar(1.0),
+                pow
+                (
+                    (scalar(1.0)-exp(-0.002*Lc/Lk()))
+                    /
+                    (scalar(1.0)-exp(-0.002*Li()/Lk())),
+                    2.0
+                )
+            ),
+            scalar(0.0)
+        );
+    }
+
+    Fr_.correctBoundaryConditions();
+
+    nut_ = Fr_*a1_*k_/max(a1_*omega_, F2()*sqrt(S2));
     nut_.correctBoundaryConditions();
+
 }
 
 

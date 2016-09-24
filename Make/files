@@ -1,4 +1,5 @@
 VLESkOmegaSST/VLESkOmegaSST.C
 VLEScoherentStructureModel/VLEScoherentStructureModel.C
+VLESrealizableKE/VLESrealizableKE.C
 
 LIB = $(FOAM_USER_LIBBIN)/libincompressibleVLESModels

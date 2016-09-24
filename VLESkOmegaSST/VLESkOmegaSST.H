@@ -25,68 +25,40 @@ Class
     Foam::incompressible::RASModels::VLESkOmegaSST
 
 Description
-    Implementation of the k-omega-SST turbulence model for incompressible
-    flows.
+    kOmega-SST VLES model for incompressible flows, derived from CAELUS. 
 
-    Turbulence model described in
-    \verbatim
-        Menter, F., Esch, T.,
-        "Elements of Industrial Heat Transfer Prediction",
-        16th Brazilian Congress of Mechanical Engineering (COBEM),
-        Nov. 2001.
-    \endverbatim
 
-    with updated coefficients from
-    \verbatim
-        Menter, F. R., Kuntz, M., and Langtry, R.,
-        "Ten Years of Industrial Experience with the SST Turbulence Model",
-        Turbulence, Heat and Mass Transfer 4, 2003,
-        pp. 625 - 632.
-    \endverbatim
-
-    but with the consistent production terms from the 2001 paper as form in the
-    2003 paper is a typo, see
-    \verbatim
-        http://turbmodels.larc.nasa.gov/sst.html
-    \endverbatim
-
-    and the addition of the optional F3 term for rough walls from
-    \verbatim
-        Hellsten, A.
-        "Some Improvements in Menter’s k-omega-SST turbulence model"
-        29th AIAA Fluid Dynamics Conference,
-        AIAA-98-2554,
-        June 1998.
-    \endverbatim
-
-    Note that this implementation is written in terms of alpha diffusion
-    coefficients rather than the more traditional sigma (alpha = 1/sigma) so
-    that the blending can be applied to all coefficuients in a consistent
-    manner.  The paper suggests that sigma is blended but this would not be
-    consistent with the blending of the k-epsilon and k-omega models.
-
-    Also note that the error in the last term of equation (2) relating to
-    sigma has been corrected.
+    References:
+    [1] D. W. Stephens, C. Sideroff and A. Jemcov, "A Two Equation VLES
+        Turbulence Model with Near-Wall Delayed Behavior" 7th Asia-Pacific 
+        International Symposium in Aerospace Technology, November 2015, 
+        Cairns, Australia
 
     The default model coefficients correspond to the following:
     \verbatim
-        VLESkOmegaSSTCoeffs
+        VLESKOmegaSSTCoeffs
         {
-            alphaK1     0.85;
+            delayed     true;
+            alphaK1     0.85034;
             alphaK2     1.0;
             alphaOmega1 0.5;
-            alphaOmega2 0.856;
+            alphaOmega2 0.85616;
             beta1       0.075;
             beta2       0.0828;
             betaStar    0.09;
-            gamma1      5/9;
-            gamma2      0.44;
+            gamma1      0.5532;
+            gamma2      0.4403;
             a1          0.31;
             b1          1.0;
             c1          10.0;
-            F3          no;
+            Cx          0.61;
         }
     \endverbatim
+
+Original author(s)
+    Aleksandar Jemcov
+
+Reprinted by Xiaoping Qiu
 
 SourceFiles
     VLESkOmegaSST.C
@@ -120,46 +92,49 @@ class VLESkOmegaSST
 protected:
 
     // Protected data
+    
+    Switch delayed_;
 
         // Model coefficients
-            dimensionedScalar alphaK1_;
-            dimensionedScalar alphaK2_;
+    dimensionedScalar alphaK1_;
+    dimensionedScalar alphaK2_;
 
-            dimensionedScalar alphaOmega1_;
-            dimensionedScalar alphaOmega2_;
+    dimensionedScalar alphaOmega1_;
+    dimensionedScalar alphaOmega2_;
 
-            dimensionedScalar gamma1_;
-            dimensionedScalar gamma2_;
+    dimensionedScalar gamma1_;
+    dimensionedScalar gamma2_;
 
-            dimensionedScalar beta1_;
-            dimensionedScalar beta2_;
+    dimensionedScalar beta1_;
+    dimensionedScalar beta2_;
 
-            dimensionedScalar betaStar_;
+    dimensionedScalar betaStar_;
 
-            dimensionedScalar a1_;
-            dimensionedScalar b1_;
-            dimensionedScalar c1_;
+    dimensionedScalar a1_;
+    dimensionedScalar c1_;
+    dimensionedScalar Cx_;
 
-            Switch F3_;
+    Switch F3_;
 
 
-        //- Wall distance field
-        //  Note: different to wall distance in parent RASModel
-        wallDist y_;
+    //- Wall distance field
+    //  Note: different to wall distance in parent RASModel
+    wallDist y_;
 
-        // Fields
+    // Fields
 
-            volScalarField k_;
-            volScalarField omega_;
-            volScalarField nut_;
+    volScalarField k_;
+    volScalarField omega_;
+    volScalarField nut_;
+    volScalarField Fr_;
 
 
     // Protected Member Functions
 
         tmp<volScalarField> F1(const volScalarField& CDkOmega) const;
         tmp<volScalarField> F2() const;
-        tmp<volScalarField> F3() const;
-        tmp<volScalarField> F23() const;
+        //tmp<volScalarField> F3() const;
+        //tmp<volScalarField> F23() const;
 
         tmp<volScalarField> blend
         (

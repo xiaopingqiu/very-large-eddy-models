@@ -531,7 +531,7 @@ void VLESSpalartAllmaras::correct()
     }
     else
     {
-        FatalErrorIn("VLESSpalartAllmaras")
+        FatalErrorIn("VLESSpalartAllmaras.C")
             << "Case is not 3D or 2D, LES is not applicable"
             << exit(FatalError);
     }

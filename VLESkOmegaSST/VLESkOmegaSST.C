@@ -454,7 +454,7 @@ void VLESkOmegaSST::correct()
     }
     else
     {
-        FatalErrorIn("VLESKOmegaSST.cpp")
+        FatalErrorIn("VLESKOmegaSST.C")
             << "Case is not 3D or 2D, VLES is not applicable"
             << exit(FatalError);
     }  

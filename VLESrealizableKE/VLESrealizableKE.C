@@ -422,7 +422,7 @@ void VLESrealizableKE::correct()
     }
     else
     {
-        FatalErrorIn("realizableVLESKE")
+        FatalErrorIn("realizableVLESKE.C")
             << "Case is not 3D or 2D, LES is not applicable"
             << exit(FatalError);
     }

@@ -452,7 +452,7 @@ void VLEScoherentStructureModel::correct()
     }
     else
     {
-        FatalErrorIn("CoherentStructureModelVLES.cpp")
+        FatalErrorIn("CoherentStructureModelVLES.C")
             << "Case is not 3D or 2D, VLES is not applicable"
             << exit(FatalError);
     }  

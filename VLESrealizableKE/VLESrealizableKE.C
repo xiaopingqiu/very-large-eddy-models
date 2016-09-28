@@ -240,7 +240,7 @@ VLESrealizableKE::VLESrealizableKE
             "k",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
         mesh_
@@ -252,7 +252,7 @@ VLESrealizableKE::VLESrealizableKE
             "epsilon",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
         mesh_
@@ -264,7 +264,7 @@ VLESrealizableKE::VLESrealizableKE
             "nut",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
         mesh_

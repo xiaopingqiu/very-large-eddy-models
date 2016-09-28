@@ -155,6 +155,14 @@ VLESSpalartAllmaras::VLESSpalartAllmaras
         transport,
         propertiesName
     ),
+    curvatureCorrection_
+    (
+        coeffDict_.lookupOrDefault<Switch>
+        (
+            "curvatureCorrection", 
+            false
+        )
+    ),
 
     delayed_(coeffDict_.lookupOrDefault<Switch>("delayed", false)),
     sigmaNut_

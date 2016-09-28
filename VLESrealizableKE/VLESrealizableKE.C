@@ -393,6 +393,7 @@ void VLESrealizableKE::correct()
 
     // Update epsilon and G at the wall
     epsilon_.boundaryFieldRef().updateCoeffs();
+    
 
     if (delayed_)
     {
@@ -405,13 +406,14 @@ void VLESrealizableKE::correct()
                 (
                     (scalar(1.0)-(1-this->F1())*exp(-0.002*Lc/Lk()))
                     /
-                    (scalar(1.0)-(1-this->F1())*exp(-0.002*Li()/Lk())),
+                    (scalar(1.0)-(1-this->F1())*exp(-0.002*Li()/Lk()) + SMALL),
                     2.0
                 )
             ),
             scalar(0.0)
         );
     }
+
     else
     {
         Fr_ = max
@@ -423,7 +425,7 @@ void VLESrealizableKE::correct()
                 (
                     (scalar(1.0)-exp(-0.002*Lc/Lk()))
                     /
-                    (scalar(1.0)-exp(-0.002*Li()/Lk())),
+                    (scalar(1.0)-exp(-0.002*Li()/Lk()) + SMALL),
                     2.0
                 )
             ),

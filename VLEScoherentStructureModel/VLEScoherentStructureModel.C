@@ -403,7 +403,7 @@ void VLEScoherentStructureModel::correct()
             }
         }
 
-        Lc.ref() = Cx().internalField()*sqrt(mesh_.V()/thickness);
+        Lc.ref() = Cx().internalField()*sqrt(mesh_.V()/dimensionedScalar("thickness", dimLength, thickness));
     }
     else
     {

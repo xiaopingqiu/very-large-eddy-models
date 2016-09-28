@@ -405,7 +405,7 @@ void VLESkOmegaSST::correct()
             }
         }
 
-        Lc.ref() = Cx_*sqrt(mesh_.V()/thickness);
+        Lc.ref() = Cx_*sqrt(mesh_.V()/dimensionedScalar("thickness", dimLength, thickness));
     }
     else
     {

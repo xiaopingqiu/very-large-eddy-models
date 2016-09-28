@@ -488,7 +488,7 @@ void VLESkOmegaSST::correct()
                 (
                     (scalar(1.0)-(1-F1)*exp(-0.002*Lc/Lk()))
                     /
-                    (scalar(1.0)-(1-F1)*exp(-0.002*Li()/Lk())),
+                    (scalar(1.0)-(1-F1)*exp(-0.002*Li()/Lk()) + SMALL),
                     2.0
                 )
             ),
@@ -506,7 +506,7 @@ void VLESkOmegaSST::correct()
                 (
                     (scalar(1.0)-exp(-0.002*Lc/Lk()))
                     /
-                    (scalar(1.0)-exp(-0.002*Li()/Lk())),
+                    (scalar(1.0)-exp(-0.002*Li()/Lk()) + SMALL),
                     2.0
                 )
             ),

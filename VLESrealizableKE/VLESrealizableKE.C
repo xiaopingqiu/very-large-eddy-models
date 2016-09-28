@@ -26,7 +26,7 @@ License
 #include "VLESrealizableKE.H"
 #include "addToRunTimeSelectionTable.H"
 
-#include "backwardsCompatibilityWallFunctions.H"
+//#include "backwardsCompatibilityWallFunctions.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -222,10 +222,10 @@ VLESrealizableKE::VLESrealizableKE
             "k",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        autoCreateK("k", mesh_)
+	mesh_
     ),
     epsilon_
     (
@@ -234,10 +234,10 @@ VLESrealizableKE::VLESrealizableKE
             "epsilon",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        autoCreateEpsilon("epsilon", mesh_)
+       mesh_
     ),
     nut_
     (
@@ -246,10 +246,10 @@ VLESrealizableKE::VLESrealizableKE
             "nut",
             runTime_.timeName(),
             mesh_,
-            IOobject::NO_READ,
+            IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
-        autoCreateNut("nut", mesh_)
+        mesh_
     ),
     Fr_
     (
@@ -418,7 +418,7 @@ void VLESrealizableKE::correct()
             }
         }
 
-        Lc.internalField() = Cx_*sqrt(mesh_.V()/thickness);
+        Lc.internalField() = Cx_*sqrt(mesh_.V()/dimensionedScalar("thickness", dimLength, thickness));
     }
     else
     {
@@ -453,7 +453,7 @@ void VLESrealizableKE::correct()
                 (
                     (scalar(1.0)-(1-this->F1())*exp(-0.002*Lc/Lk()))
                     /
-                    (scalar(1.0)-(1-this->F1())*exp(-0.002*Li()/Lk())),
+                    (scalar(1.0)-(1-this->F1())*exp(-0.002*Li()/Lk()) + SMALL),
                     2.0
                 )
             ),
@@ -471,7 +471,7 @@ void VLESrealizableKE::correct()
                 (
                     (scalar(1.0)-exp(-0.002*Lc/Lk()))
                     /
-                    (scalar(1.0)-exp(-0.002*Li()/Lk())),
+                    (scalar(1.0)-exp(-0.002*Li()/Lk()) + SMALL),
                     2.0
                 )
             ),

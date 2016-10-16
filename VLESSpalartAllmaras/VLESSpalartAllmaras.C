@@ -280,19 +280,6 @@ VLESSpalartAllmaras::VLESSpalartAllmaras
         mesh_
     ),
 
-    nut_
-    (
-        IOobject
-        (
-            "nut",
-            runTime_.timeName(),
-            mesh_,
-            IOobject::MUST_READ,
-            IOobject::AUTO_WRITE
-        ),
-        mesh_
-    ),
-
     fr1_
     (
         IOobject

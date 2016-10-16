@@ -99,7 +99,6 @@ protected:
 
             volScalarField k_;
             volScalarField epsilon_;
-            volScalarField nut_;
 	    volScalarField Fr_;
 
 	    //- Wall distance field

@@ -101,7 +101,6 @@ class VLESSpalartAllmaras
         dimensionedScalar Cx_;
 
         volScalarField nuTilda_;
-        volScalarField nut_;
         volScalarField fr1_;
         volScalarField Fr_;
 

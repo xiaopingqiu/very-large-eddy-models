@@ -119,7 +119,6 @@ class VLESkOmegaSST
 
 	volScalarField k_;
 	volScalarField omega_;
-	volScalarField nut_;
 	volScalarField Fr_;
 
 
